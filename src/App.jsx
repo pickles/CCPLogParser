@@ -17,13 +17,10 @@ import PropTypes from 'prop-types';
 import Dropzone from 'react-dropzone';
 import { NorthStarThemeProvider } from 'aws-northstar';
 import { withStyles } from '@material-ui/core/styles';
-import Container from '@material-ui/core/Container';
-import Grid from '@material-ui/core/Grid';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
-import Box from '@material-ui/core/Box';
 import Typography from '@material-ui/core/Typography';
 import Link from '@material-ui/core/Link';
 import DescriptionIcon from '@material-ui/icons/Description';
@@ -54,14 +51,11 @@ function TabPanel(props) {
             hidden={value !== index}
             id={`simple-tabpanel-${index}`}
             aria-labelledby={`simple-tab-${index}`}
+            style={{ width: '100%', height: '100%' }}
             // eslint-disable-next-line react/jsx-props-no-spreading
             {...other}
         >
-            {value === index && (
-                <Container>
-                    <Box>{children}</Box>
-                </Container>
-            )}
+            {value === index && children}
         </div>
     );
 }
@@ -364,46 +358,52 @@ class App extends React.Component {
                                 { (!isInitial && !isLoading) && (
                                     <>
                                         <TabPanel value={tabIndex} index={0}>
-                                            <Container className={classes.content}>
-                                                <Grid container spacing={2}>
-                                                    <Grid item xs={12} md={3} style={isExpanded ? { display: 'none' } : {}}>
-                                                        <SnapshotListView
-                                                            log={log}
-                                                            selected={selectedSnapshots}
-                                                            selectLog={this.selectLog}
-                                                            selectSnapshots={this.selectSnapshots}
-                                                        />
-                                                    </Grid>
-                                                    <Grid item xs={12} md={9} style={isExpanded ? { minWidth: '100%', maxWidth: '100%' } : {}}>
-                                                        <LogView
-                                                            log={log}
-                                                            selected={selectedLog}
-                                                            isExpanded={isExpanded}
-                                                            expand={this.handleExpandLogView}
-                                                        />
-                                                    </Grid>
-                                                </Grid>
-                                            </Container>
+                                            <div style={{ display: 'flex', width: '100%', height: 'calc(100vh - 120px)' }}>
+                                                <div style={isExpanded ? { display: 'none' } : {
+                                                    width: '25%',
+                                                    minWidth: '300px',
+                                                    height: '100%',
+                                                    overflow: 'auto',
+                                                }}
+                                                >
+                                                    <SnapshotListView
+                                                        log={log}
+                                                        selected={selectedSnapshots}
+                                                        selectLog={this.selectLog}
+                                                        selectSnapshots={this.selectSnapshots}
+                                                    />
+                                                </div>
+                                                <div style={{
+                                                    flex: 1,
+                                                    minWidth: 0,
+                                                    height: '100%',
+                                                    overflow: 'hidden',
+                                                }}
+                                                >
+                                                    <LogView
+                                                        log={log}
+                                                        selected={selectedLog}
+                                                        isExpanded={isExpanded}
+                                                        expand={this.handleExpandLogView}
+                                                    />
+                                                </div>
+                                            </div>
                                         </TabPanel>
                                         <TabPanel value={tabIndex} index={1}>
-                                            <Container className={classes.content}>
-                                                <Grid container spacing={2}>
-                                                    <Grid item xs={12}>
-                                                        <SkewMetricsView
-                                                            log={log}
-                                                        />
-                                                        <ApiCallMetricsView
-                                                            log={log}
-                                                            indexedLogs={indexedLogs}
-                                                        />
-                                                        { hasRtcMetrics && (
-                                                            <RtcMetricsViewGroup
-                                                                timeRange={timeRange}
-                                                            />
-                                                        )}
-                                                    </Grid>
-                                                </Grid>
-                                            </Container>
+                                            <div className={classes.content}>
+                                                <SkewMetricsView
+                                                    log={log}
+                                                />
+                                                <ApiCallMetricsView
+                                                    log={log}
+                                                    indexedLogs={indexedLogs}
+                                                />
+                                                { hasRtcMetrics && (
+                                                    <RtcMetricsViewGroup
+                                                        timeRange={timeRange}
+                                                    />
+                                                )}
+                                            </div>
                                         </TabPanel>
                                     </>
                                 ) }

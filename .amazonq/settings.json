@@ -1,0 +1,14 @@
+{
+  "telemetryEnabled": true,
+  "shareCodeWhispererContentWithAWS": true,
+  "autoTriggerEnabled": true,
+  "commandExecution": {
+    "eslint": {
+      "autoApprove": true,
+      "commands": [
+        "npx eslint",
+        "eslint"
+      ]
+    }
+  }
+}

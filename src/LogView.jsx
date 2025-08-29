@@ -26,7 +26,13 @@ import UnfoldMore from '@material-ui/icons/UnfoldMore';
 import LogLineView from './LogLineView';
 
 const styles = (theme) => ({
-    root: {},
+    root: {
+        width: '100%',
+        minWidth: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+    },
     menuButton: {
         marginRight: theme.spacing(2),
     },
@@ -87,8 +93,10 @@ const styles = (theme) => ({
         },
     },
     content: {
-        width: 'auto',
-        overflowX: 'scroll',
+        width: '100%',
+        minWidth: 0,
+        flex: 1,
+        overflow: 'auto',
         fontFamily: '"Monaco", monospace',
         fontSize: 12,
         padding: theme.spacing(2, 0),
@@ -99,8 +107,8 @@ const styles = (theme) => ({
         outline: 'none',
     },
     rows: {
-        width: 'max-content',
-        minWidth: '100%',
+        width: '100%',
+        minWidth: 'fit-content',
     },
     row: {
         display: 'flex',
@@ -162,7 +170,15 @@ class LogView extends React.PureComponent {
 
         return (
             <div className={clsx(classes.root, classNameProp)}>
-                <Paper>
+                <Paper style={{
+                    width: '100%',
+                    minWidth: '100%',
+                    boxSizing: 'border-box',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
+                >
                     <div className={classes.header}>
                         <div className={classes.headerInside}>
                             <Typography className={classes.title} variant="h6" component="h3">

@@ -25,8 +25,9 @@ import ListSubheader from '@material-ui/core/ListSubheader';
 
 const styles = (theme) => ({
     root: {
-        position: 'sticky',
-        top: theme.spacing(2),
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
     },
     header: {
         position: 'static',
@@ -53,12 +54,11 @@ const styles = (theme) => ({
     },
     list: {
         width: '100%',
-        height: '100%',
+        flex: 1,
         backgroundColor: theme.palette.background.paper,
         position: 'relative',
         overflow: 'auto',
         padding: 0,
-        maxHeight: `calc(100vh - ${theme.spacing(10)}px)`,
     },
     listSection: {
         backgroundColor: 'inherit',
