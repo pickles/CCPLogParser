@@ -67,7 +67,7 @@ const patterns = [
     },
     {
         // eslint-disable-next-line no-useless-escape
-        pattern: /AWSClient:\s<--\sOperation\s'(\w+)'\s(succeeded|failed)[:\. ]{1,3}(\{.+\}){0,2}/,
+        pattern: /AWSClient:\s<--\sOperation\s'(\w+)'\s(succeeded|failed)(?:\swith\s\d+\sretries)?[:\. ]{1,3}(\{.+\})?/,
         case: 'API_REPLY',
         group: 1,
         messages: 'AWSClient: <-- ',
@@ -181,7 +181,29 @@ handlers.API_REPLY = (input, matched, pattern) => {
     output.status = matched[2];
     output.text = `${matched[2] === 'succeeded' ? '✔ ' : '❗ '}${pattern.messages} '${matched[1]}' ${matched[2]}`;
     if (matched[2] === 'failed') {
-        output.objects = [JSON.parse(matched[3])];
+        console.log('Processing failed API call:', {
+            operation: matched[1],
+            fullText: input.text,
+            matched3: matched[3],
+            matched3Type: typeof matched[3],
+            allMatches: matched,
+        });
+        if (matched[3] && matched[3] !== 'undefined') {
+            try {
+                output.objects = [JSON.parse(matched[3])];
+                console.log('Successfully parsed error details for', matched[1]);
+            } catch (error) {
+                console.error('Failed to parse JSON for', matched[1], ':', {
+                    error: error.message,
+                    rawData: matched[3],
+                    logEntry: input,
+                });
+                output.objects = [{ error: 'Failed to parse error details', raw: matched[3] }];
+            }
+        } else {
+            console.log('No error details available for', matched[1], 'matched[3]:', matched[3]);
+            output.objects = [{ error: 'No error details available' }];
+        }
         output.highlight = true;
     }
     if (!index.latency.has(matched[1])) {
@@ -309,25 +331,47 @@ export function resetIndex() {
     };
 }
 export function findExtras(logEntry, idx) {
-    // adding index in the logs
-    const logEntryOutput = logEntry;
-    logEntryOutput._key = idx;
-    // convert the timestamp back to epoch for easier timediff
-    // logEntry._ts = new Date(logEntry.time).getTime();
-    // why signalling log entries have a space at front???
-    logEntryOutput.text = logEntry.text.trim();
+    try {
+        // adding index in the logs
+        const logEntryOutput = logEntry;
+        logEntryOutput._key = idx;
+        // convert the timestamp back to epoch for easier timediff
+        // logEntry._ts = new Date(logEntry.time).getTime();
+        // why signalling log entries have a space at front???
+        logEntryOutput.text = logEntry.text.trim();
 
-    // eslint-disable-next-line no-restricted-syntax, no-unused-vars
-    for (const item of patterns) {
-        let a = null;
-        a = item.pattern.exec(logEntry.text);
-        if (a !== null) {
-            // we found a match pattern - now do something about it.
-            return handlers[item.case](logEntry, a, item);
+        // eslint-disable-next-line no-restricted-syntax, no-unused-vars
+        for (const item of patterns) {
+            let a = null;
+            a = item.pattern.exec(logEntry.text);
+            if (a !== null) {
+                // we found a match pattern - now do something about it.
+                try {
+                    return handlers[item.case](logEntry, a, item);
+                } catch (error) {
+                    console.error('Error in handler', item.case, 'for log entry:', {
+                        error: error.message,
+                        stack: error.stack,
+                        logEntry,
+                        pattern: item,
+                        matches: a,
+                    });
+                    // Return original entry if handler fails
+                    return logEntry;
+                }
+            }
+            a = null;
         }
-        a = null;
+        return logEntry;
+    } catch (error) {
+        console.error('Error in findExtras for log entry:', {
+            error: error.message,
+            stack: error.stack,
+            logEntry,
+            idx,
+        });
+        return logEntry;
     }
-    return logEntry;
 }
 
 export function getSoftphoneMetrics() {

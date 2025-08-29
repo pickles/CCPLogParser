@@ -172,7 +172,33 @@ class App extends React.Component {
             try {
                 resetIndex(); // rebuild the index for this file
                 resetSoftphoneMetrics();// rebuild the SoftPhone metric for this file
-                this.onLoadLog(JSON.parse(e.target.result));
+                console.log('Parsing JSON...');
+                const rawData = JSON.parse(e.target.result);
+                console.log('Raw data length:', rawData.length);
+                console.log('Parse completed.');
+                // Fix stringified null and array values
+                const fixedData = rawData.map((entry) => {
+                    const fixedEntry = { ...entry };
+                    // Fix exception field
+                    if (entry.exception === 'null') {
+                        fixedEntry.exception = null;
+                    }
+
+                    // Fix objects field
+                    if (entry.objects === '[]') {
+                        fixedEntry.objects = [];
+                    } else if (typeof entry.objects === 'string' && entry.objects.startsWith('[')) {
+                        try {
+                            fixedEntry.objects = JSON.parse(entry.objects);
+                        } catch (error) {
+                            console.warn('Failed to parse objects:', entry.objects, error);
+                        }
+                    }
+
+                    return fixedEntry;
+                });
+                console.log('Fixed data length:', fixedData.length);
+                this.onLoadLog(fixedData);
             } catch (error) {
                 // eslint-disable-next-line no-alert
                 alert(`I failed to load the file ${files[0].name}: ${error}`);
@@ -193,26 +219,48 @@ class App extends React.Component {
     }
 
     onLoadLog(log) {
-        const rearrangedLog = log
-            .map((event, idx) => (
-                { ...event, _oriKey: idx, _ts: new Date(event.time).getTime() }
-            ))
-            .sort((a, b) => (a._ts === b._ts ? a._oriKey - b._oriKey : a._ts - b._ts))
-            .map((event, idx) => findExtras(event, idx));
+        console.log('onLoadLog called with', log.length, 'entries');
+        try {
+            const rearrangedLog = log
+                .map((event, idx) => {
+                    if (!event.time) {
+                        console.warn('Event missing time:', event);
+                        return null;
+                    }
+                    return { ...event, _oriKey: idx, _ts: new Date(event.time).getTime() };
+                })
+                .filter((event) => event !== null)
+                .sort((a, b) => (a._ts === b._ts ? a._oriKey - b._oriKey : a._ts - b._ts))
+                .map((event, idx) => {
+                    try {
+                        return findExtras(event, idx);
+                    } catch (error) {
+                        console.error('Error in findExtras for event:', event, error);
+                        return event;
+                    }
+                });
 
-        const timeRange = [rearrangedLog[0]._ts, rearrangedLog[rearrangedLog.length - 1]._ts];
+            console.log('Rearranged log length:', rearrangedLog.length);
+            const timeRange = rearrangedLog.length > 0
+                ? [rearrangedLog[0]._ts, rearrangedLog[rearrangedLog.length - 1]._ts]
+                : [Date.now(), Date.now()];
 
-        this.setState({
-            isInitial: false,
-            // eslint-disable-next-line react/no-unused-state
-            originalLog: log.map((event, idx) => ({ ...event, _oriKey: idx })),
-            log: rearrangedLog,
-            selectedLog: [],
-            selectedSnapshots: [],
-            indexedLogs: buildIndex(),
-            hasRtcMetrics: hasSoftphoneMetrics(),
-            timeRange,
-        });
+            this.setState({
+                isInitial: false,
+                // eslint-disable-next-line react/no-unused-state
+                originalLog: log.map((event, idx) => ({ ...event, _oriKey: idx })),
+                log: rearrangedLog,
+                selectedLog: [],
+                selectedSnapshots: [],
+                indexedLogs: buildIndex(),
+                hasRtcMetrics: hasSoftphoneMetrics(),
+                timeRange,
+            });
+            console.log('State updated successfully');
+        } catch (error) {
+            console.error('Error in onLoadLog:', error);
+            throw error;
+        }
     }
 
     selectLog(selectedLog) {
