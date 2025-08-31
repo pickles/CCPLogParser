@@ -204,7 +204,7 @@ class LogView extends React.PureComponent {
                                 : <Button variant="link" className={classes.expand} onClick={() => expand()}><UnfoldLess style={{ transform: 'rotate(90deg)' }} /></Button> }
                         </div>
                     </div>
-                    <div className={classes.content}>
+                    <div className={classes.content} id="log-content">
                         <div className={classes.rows}>
                             { log.map((event) => {
                                 if (LogLevel[event.level] >= levelFilter
