@@ -281,7 +281,9 @@ class App extends React.Component {
             console.log('State updated successfully'); // eslint-disable-line no-console
 
             // Check for parse errors after processing is complete
-            const errors = getParseErrors();
+            const errors = getParseErrors().filter((error) => !(error.logEntry
+                && error.logEntry.text
+                && error.logEntry.text.includes("AWSClient: <-- Operation 'createAdditionalConnection' failed")));
             if (errors.length > 0) {
                 const firstError = errors[0];
                 this.handleParseError({
