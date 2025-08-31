@@ -13,6 +13,24 @@
 
 /* eslint no-unused-vars: ["error", { "argsIgnorePattern": "^_" }] */
 
+let parseErrors = [];
+
+export function setParseErrorCallback(_callback) {
+    // Callback is no longer used as we batch errors
+}
+
+export function resetParseErrors() {
+    parseErrors = [];
+}
+
+export function getParseErrors() {
+    return parseErrors;
+}
+
+function addParseError(errorDetails) {
+    parseErrors.push(errorDetails);
+}
+
 /* eslint-disable no-underscore-dangle */
 // Add your pattern with the following definition:
 // {
@@ -67,7 +85,7 @@ const patterns = [
     },
     {
         // eslint-disable-next-line no-useless-escape
-        pattern: /AWSClient:\s<--\sOperation\s'(\w+)'\s(succeeded|failed)(?:\swith\s\d+\sretries)?[:\. ]{1,3}(\{.+\})?/,
+        pattern: /AWSClient:\s<--\sOperation\s'(\w+)'\s(succeeded|failed)(?:\swith\s\d+\sretries)?[:\. ]{1,3}(.*)$/,
         case: 'API_REPLY',
         group: 1,
         messages: 'AWSClient: <-- ',
@@ -126,7 +144,20 @@ const handlers = {};
 handlers.CALLING_OPERATION = (input, matched, pattern) => {
     const output = input;
     output.text = pattern.messages;
-    output.objects = [JSON.parse(matched[pattern.group])];
+    try {
+        output.objects = [JSON.parse(matched[pattern.group])];
+    } catch (error) {
+        const errorDetails = {
+            error: `JSON Parse Error in CALLING_OPERATION: ${error.message}`,
+            stack: error.stack,
+            logEntry: input,
+            pattern,
+            rawData: matched[pattern.group],
+            entryIndex: input._key,
+        };
+        addParseError(errorDetails);
+        output.objects = [{ error: 'Failed to parse JSON', raw: matched[pattern.group] }];
+    }
     return output;
 };
 
@@ -140,7 +171,20 @@ handlers.PARSE_SDP = (input, matched, pattern) => {
 handlers.WSS_CONFIG = (input, matched, pattern) => {
     const output = input;
     output.text = pattern.messages;
-    output.objects = [JSON.parse(matched[pattern.group])];
+    try {
+        output.objects = [JSON.parse(matched[pattern.group])];
+    } catch (error) {
+        const errorDetails = {
+            error: `JSON Parse Error in WSS_CONFIG: ${error.message}`,
+            stack: error.stack,
+            logEntry: input,
+            pattern,
+            rawData: matched[pattern.group],
+            entryIndex: input._key,
+        };
+        addParseError(errorDetails);
+        output.objects = [{ error: 'Failed to parse JSON', raw: matched[pattern.group] }];
+    }
     return output;
 };
 
@@ -181,7 +225,7 @@ handlers.API_REPLY = (input, matched, pattern) => {
     output.status = matched[2];
     output.text = `${matched[2] === 'succeeded' ? '✔ ' : '❗ '}${pattern.messages} '${matched[1]}' ${matched[2]}`;
     if (matched[2] === 'failed') {
-        console.log('Processing failed API call:', {
+        console.log('Processing failed API call:', { // eslint-disable-line no-console
             operation: matched[1],
             fullText: input.text,
             matched3: matched[3],
@@ -191,17 +235,39 @@ handlers.API_REPLY = (input, matched, pattern) => {
         if (matched[3] && matched[3] !== 'undefined') {
             try {
                 output.objects = [JSON.parse(matched[3])];
-                console.log('Successfully parsed error details for', matched[1]);
+                console.log('Successfully parsed error details for', matched[1]); // eslint-disable-line no-console
             } catch (error) {
-                console.error('Failed to parse JSON for', matched[1], ':', {
-                    error: error.message,
-                    rawData: matched[3],
-                    logEntry: input,
-                });
-                output.objects = [{ error: 'Failed to parse error details', raw: matched[3] }];
+                let fixedJson = matched[3];
+                if (!fixedJson.endsWith('}')) {
+                    const openBraces = (fixedJson.match(/\{/g) || []).length;
+                    const closeBraces = (fixedJson.match(/\}/g) || []).length;
+                    fixedJson += '}'.repeat(openBraces - closeBraces);
+                }
+
+                try {
+                    output.objects = [JSON.parse(fixedJson)];
+                    console.log('Successfully parsed fixed JSON for', matched[1]); // eslint-disable-line no-console
+                } catch (secondError) {
+                    const errorDetails = {
+                        error: `JSON Parse Error: ${secondError.message}`,
+                        stack: secondError.stack,
+                        logEntry: {
+                            ...input,
+                            text: matched[0],
+                            time: input.time,
+                            component: input.component,
+                            level: input.level,
+                        },
+                        pattern: { case: 'API_REPLY_JSON_PARSE' },
+                        rawData: matched[3],
+                        entryIndex: input._key,
+                    };
+                    addParseError(errorDetails);
+                    output.objects = [{ error: 'Failed to parse error details', raw: matched[3] }];
+                }
             }
         } else {
-            console.log('No error details available for', matched[1], 'matched[3]:', matched[3]);
+            console.log('No error details available for', matched[1], 'matched[3]:', matched[3]); // eslint-disable-line no-console
             output.objects = [{ error: 'No error details available' }];
         }
         output.highlight = true;
@@ -248,22 +314,48 @@ handlers.HEART_BEAT_REPLY = (input, _matched, _pattern) => {
 };
 
 handlers.SOFTPHONE_METRICS = (input, matched, pattern) => {
-    const objects = JSON.parse(matched[1]);
     const output = input;
-    output.objects = objects;
-    output.text = pattern.messages;
-    pushMetrics(objects);
-    softphoneMetrics.hasValues = true;
-
+    try {
+        const objects = JSON.parse(matched[1]);
+        output.objects = objects;
+        output.text = pattern.messages;
+        pushMetrics(objects);
+        softphoneMetrics.hasValues = true;
+    } catch (error) {
+        const errorDetails = {
+            error: `JSON Parse Error in SOFTPHONE_METRICS: ${error.message}`,
+            stack: error.stack,
+            logEntry: input,
+            pattern,
+            rawData: matched[1],
+            entryIndex: input._key,
+        };
+        addParseError(errorDetails);
+        output.objects = [{ error: 'Failed to parse JSON', raw: matched[1] }];
+        output.text = pattern.messages;
+    }
     return output;
 };
 
 handlers.SOFTPHONE_REPORT = (input, matched, pattern) => {
-    const objects = JSON.parse(matched[1]);
     const output = input;
-    output.objects = [objects];
-    output.text = pattern.messages;
-
+    try {
+        const objects = JSON.parse(matched[1]);
+        output.objects = [objects];
+        output.text = pattern.messages;
+    } catch (error) {
+        const errorDetails = {
+            error: `JSON Parse Error in SOFTPHONE_REPORT: ${error.message}`,
+            stack: error.stack,
+            logEntry: input,
+            pattern,
+            rawData: matched[1],
+            entryIndex: input._key,
+        };
+        addParseError(errorDetails);
+        output.objects = [{ error: 'Failed to parse JSON', raw: matched[1] }];
+        output.text = pattern.messages;
+    }
     return output;
 };
 
@@ -349,13 +441,24 @@ export function findExtras(logEntry, idx) {
                 try {
                     return handlers[item.case](logEntry, a, item);
                 } catch (error) {
-                    console.error('Error in handler', item.case, 'for log entry:', {
+                    console.error('Error in handler', item.case, 'for log entry:', { // eslint-disable-line no-console
                         error: error.message,
                         stack: error.stack,
                         logEntry,
                         pattern: item,
                         matches: a,
                     });
+
+                    const errorDetails = {
+                        error: error.message,
+                        stack: error.stack,
+                        logEntry,
+                        pattern: item,
+                        matches: a,
+                        entryIndex: logEntry._key,
+                    };
+                    addParseError(errorDetails);
+
                     // Return original entry if handler fails
                     return logEntry;
                 }
@@ -364,12 +467,22 @@ export function findExtras(logEntry, idx) {
         }
         return logEntry;
     } catch (error) {
-        console.error('Error in findExtras for log entry:', {
+        console.error('Error in findExtras for log entry:', { // eslint-disable-line no-console
             error: error.message,
             stack: error.stack,
             logEntry,
             idx,
         });
+
+        const errorDetails = {
+            error: error.message,
+            stack: error.stack,
+            logEntry,
+            idx,
+            entryIndex: idx,
+        };
+        addParseError(errorDetails);
+
         return logEntry;
     }
 }

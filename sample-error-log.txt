@@ -1,0 +1,88 @@
+[
+    {
+        "component": "ccp",
+        "level": "INFO",
+        "text": "Log roll interval occurred.",
+        "time": "2025-05-06T17:25:02.353Z",
+        "tabId": "1746537088904-7abj4be107p",
+        "exception": null,
+        "objects": [],
+        "line": 1,
+        "agentResourceId": "51beb344-0b0d-488f-ac78-8beeebaa627b",
+        "loggerId": "1746548702351-2ik0r80ksuc",
+        "contextLayer": "CCP"
+    },
+    {
+        "component": "ccp",
+        "level": "TRACE",
+        "text": "AWSClient: --> Calling operation 'createAdditionalConnection'",
+        "time": "2025-05-06T17:25:07.672Z",
+        "tabId": null,
+        "exception": null,
+        "objects": [],
+        "line": 2,
+        "agentResourceId": "51beb344-0b0d-488f-ac78-8beeebaa627b",
+        "loggerId": "1746548705251-y7vwvua86nb",
+        "contextLayer": "SharedWorker"
+    },
+    {
+        "component": "ccp",
+        "level": "TRACE",
+        "text": "AWSClient: <-- Operation 'createAdditionalConnection' failed: {\"message\":\"Cannot create new connection by phone number[redacted]\"",
+        "time": "2025-05-06T17:25:07.733Z",
+        "tabId": null,
+        "exception": null,
+        "objects": [],
+        "line": 3,
+        "agentResourceId": "51beb344-0b0d-488f-ac78-8beeebaa627b",
+        "loggerId": "1746548705251-y7vwvua86nb",
+        "contextLayer": "SharedWorker"
+    },
+    {
+        "component": "ccp",
+        "level": "ERROR",
+        "text": "Invalid JSON format in log entry",
+        "time": "2025-05-06T17:25:08.000Z",
+        "tabId": null,
+        "exception": "SyntaxError: Unexpected token",
+        "objects": "invalid json string here",
+        "line": 4,
+        "agentResourceId": "51beb344-0b0d-488f-ac78-8beeebaa627b",
+        "loggerId": "1746548705251-y7vwvua86nb",
+        "contextLayer": "SharedWorker"
+    },
+    {
+        "component": "ccp",
+        "level": "TRACE",
+        "text": "GET_AGENT_SNAPSHOT succeeded.",
+        "time": "2025-05-06T17:25:09.921Z",
+        "tabId": null,
+        "exception": null,
+        "objects": [
+            {
+                "snapshot": {
+                    "state": {
+                        "agentStateARN": "arn:aws:connect:us-east-1:943787957938:instance/553e079f-40b6-4dc2-969a-9c0e6ca357f2/agent-state/d57a6ea7-1652-460d-a23f-ffeb11f5e745",
+                        "type": "not_routable",
+                        "name": "Available",
+                        "startTimestamp": "2025-05-06T17:24:41.275Z"
+                    },
+                    "agentAvailabilityState": {
+                        "state": "Available",
+                        "timeStamp": "2025-05-06T17:24:40.979Z"
+                    },
+                    "contacts": [],
+                    "snapshotTimestamp": "2025-05-06T17:25:10.275Z",
+                    "localTimestamp": 1746552309921,
+                    "skew": 354,
+                    "contentLength": 468
+                },
+                "nextToken": "6j1Br0WySrAsZ0r2TwA++MgmUa+dXuTsdQOral17Ki8=_174655228097900"
+            }
+        ],
+        "line": 5,
+        "agentResourceId": "51beb344-0b0d-488f-ac78-8beeebaa627b",
+        "loggerId": "1746548705251-y7vwvua86nb",
+        "contextLayer": "SharedWorker"
+    }
+]

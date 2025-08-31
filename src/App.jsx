@@ -37,8 +37,16 @@ import ApiCallMetricsView from './ApiCallMetricsView';
 import RtcMetricsViewGroup from './RtcMetricsViewGroup';
 
 import {
-    buildIndex, findExtras, resetIndex, hasSoftphoneMetrics, resetSoftphoneMetrics,
+    buildIndex,
+    findExtras,
+    resetIndex,
+    hasSoftphoneMetrics,
+    resetSoftphoneMetrics,
+    setParseErrorCallback,
+    resetParseErrors,
+    getParseErrors,
 } from './utils/findExtras';
+import ParseErrorDialog from './ParseErrorDialog';
 
 function TabPanel(props) {
     const {
@@ -126,7 +134,11 @@ class App extends React.Component {
         this.handleChangeTab = this.handleChangeTab.bind(this);
         this.handleOnDrop = this.handleOnDrop.bind(this);
         this.handleExpandLogView = this.handleExpandLogView.bind(this);
+        this.handleParseError = this.handleParseError.bind(this);
+        this.closeParseErrorDialog = this.closeParseErrorDialog.bind(this);
         this.dropzoneRef = createRef();
+
+        setParseErrorCallback(this.handleParseError);
 
         if (window.File && window.FileReader && window.FileList && window.Blob) {
             // Great success! All the File APIs are supported.
@@ -148,6 +160,10 @@ class App extends React.Component {
             selectedSnapshots: [],
             indexedLogs: null,
             hasRtcLog: false,
+            parseErrorDialog: {
+                isOpen: false,
+                errorDetails: null,
+            },
         };
     }
 
@@ -158,7 +174,9 @@ class App extends React.Component {
         ];
         if (!allowedTypes.includes(files[0].type)) {
             // eslint-disable-next-line no-alert
-            alert(`Error in processing ${files[0].name}: ${files[0].type} is not a supported file type.`);
+            alert(`Error in processing ${files[0].name}: ${
+                files[0].type
+            } is not a supported file type.`);
             return;
         }
         const reader = new FileReader();
@@ -166,10 +184,11 @@ class App extends React.Component {
             try {
                 resetIndex(); // rebuild the index for this file
                 resetSoftphoneMetrics();// rebuild the SoftPhone metric for this file
-                console.log('Parsing JSON...');
+                resetParseErrors(); // reset parse errors for this file
+                console.log('Parsing JSON...'); // eslint-disable-line no-console
                 const rawData = JSON.parse(e.target.result);
-                console.log('Raw data length:', rawData.length);
-                console.log('Parse completed.');
+                console.log('Raw data length:', rawData.length); // eslint-disable-line no-console
+                console.log('Parse completed.'); // eslint-disable-line no-console
                 // Fix stringified null and array values
                 const fixedData = rawData.map((entry) => {
                     const fixedEntry = { ...entry };
@@ -185,13 +204,13 @@ class App extends React.Component {
                         try {
                             fixedEntry.objects = JSON.parse(entry.objects);
                         } catch (error) {
-                            console.warn('Failed to parse objects:', entry.objects, error);
+                            console.warn('Failed to parse objects:', entry.objects, error); // eslint-disable-line no-console
                         }
                     }
 
                     return fixedEntry;
                 });
-                console.log('Fixed data length:', fixedData.length);
+                console.log('Fixed data length:', fixedData.length); // eslint-disable-line no-console
                 this.onLoadLog(fixedData);
             } catch (error) {
                 // eslint-disable-next-line no-alert
@@ -212,13 +231,22 @@ class App extends React.Component {
         this.setState((prevState) => ({ isExpanded: !prevState.isExpanded }));
     }
 
+    handleParseError(errorDetails) {
+        this.setState({
+            parseErrorDialog: {
+                isOpen: true,
+                errorDetails,
+            },
+        });
+    }
+
     onLoadLog(log) {
-        console.log('onLoadLog called with', log.length, 'entries');
+        console.log('onLoadLog called with', log.length, 'entries'); // eslint-disable-line no-console
         try {
             const rearrangedLog = log
                 .map((event, idx) => {
                     if (!event.time) {
-                        console.warn('Event missing time:', event);
+                        console.warn('Event missing time:', event); // eslint-disable-line no-console
                         return null;
                     }
                     return { ...event, _oriKey: idx, _ts: new Date(event.time).getTime() };
@@ -229,12 +257,12 @@ class App extends React.Component {
                     try {
                         return findExtras(event, idx);
                     } catch (error) {
-                        console.error('Error in findExtras for event:', event, error);
+                        console.error('Error in findExtras for event:', event, error); // eslint-disable-line no-console
                         return event;
                     }
                 });
 
-            console.log('Rearranged log length:', rearrangedLog.length);
+            console.log('Rearranged log length:', rearrangedLog.length); // eslint-disable-line no-console
             const timeRange = rearrangedLog.length > 0
                 ? [rearrangedLog[0]._ts, rearrangedLog[rearrangedLog.length - 1]._ts]
                 : [Date.now(), Date.now()];
@@ -250,9 +278,24 @@ class App extends React.Component {
                 hasRtcMetrics: hasSoftphoneMetrics(),
                 timeRange,
             });
-            console.log('State updated successfully');
+            console.log('State updated successfully'); // eslint-disable-line no-console
+
+            // Check for parse errors after processing is complete
+            const errors = getParseErrors();
+            if (errors.length > 0) {
+                const firstError = errors[0];
+                this.handleParseError({
+                    error: `${errors.length} parse error(s) occurred during log processing`,
+                    stack: 'Multiple parse errors - see console for details',
+                    logEntry: firstError.logEntry || { text: 'Multiple entries affected' },
+                    pattern: { case: 'BATCH_PARSE_ERRORS' },
+                    errorCount: errors.length,
+                    errors: errors.slice(0, 5), // Show first 5 errors
+                    entryIndex: firstError.entryIndex,
+                });
+            }
         } catch (error) {
-            console.error('Error in onLoadLog:', error);
+            console.error('Error in onLoadLog:', error); // eslint-disable-line no-console
             throw error;
         }
     }
@@ -263,6 +306,15 @@ class App extends React.Component {
 
     selectSnapshots(selectedSnapshots) {
         this.setState({ selectedSnapshots });
+    }
+
+    closeParseErrorDialog() {
+        this.setState({
+            parseErrorDialog: {
+                isOpen: false,
+                errorDetails: null,
+            },
+        });
     }
 
     render() {
@@ -278,6 +330,7 @@ class App extends React.Component {
             indexedLogs,
             hasRtcMetrics,
             timeRange,
+            parseErrorDialog,
         } = this.state;
         const { classes } = this.props;
 
@@ -410,6 +463,11 @@ class App extends React.Component {
                             </div>
                         )}
                     </Dropzone>
+                    <ParseErrorDialog
+                        isOpen={parseErrorDialog.isOpen}
+                        onClose={this.closeParseErrorDialog}
+                        errorDetails={parseErrorDialog.errorDetails || {}}
+                    />
                 </div>
             </NorthStarThemeProvider>
         );
