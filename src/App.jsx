@@ -351,7 +351,7 @@ class App extends React.Component {
                                 <AppBar position="static" className={classes.appbar}>
                                     <Toolbar variant="dense">
                                         <Typography variant="h6" color="inherit" className={classes.title}>
-                                            CCP Log Parser
+                                            CCP Log Parser (Fork)
                                             { filename && (
                                                 <span>
                                                     &nbsp;:&nbsp;

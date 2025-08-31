@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025.08.31
+
+- Fixed API_REPLY regex to capture full text including [redacted] patterns
+- Enhanced error dialog with detailed entry information (entry numbers, component, level)
+- Added comprehensive GitHub issue template with error details and log attachment instructions
+
 ## 2025.08.30
 
 - Enhanced LogView layout to expand to full window width
