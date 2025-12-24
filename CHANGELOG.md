@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025.12.24
+
+- Fixed WebRTC metrics parsing for logs with spaces around 'sendSoftphoneMetrics success'
+- Enhanced SOFTPHONE_METRICS handler to parse metrics from objects field when pattern match is empty
+- Improved regex pattern to handle various log formats and ensure WebRTC metrics display consistently
+
 ## 2025.08.31
 
 - Fixed API_REPLY regex to capture full text including [redacted] patterns
