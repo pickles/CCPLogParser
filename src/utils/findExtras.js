@@ -103,7 +103,7 @@ const patterns = [
         messages: '',
     },
     {
-        pattern: /sendSoftphoneMetrics success(.+)/,
+        pattern: /sendSoftphoneMetrics success\s*(.*)/,
         case: 'SOFTPHONE_METRICS',
         group: 1,
         messages: '🔽Expand to see webrtc metrics (Very Long)',
@@ -316,7 +316,17 @@ handlers.HEART_BEAT_REPLY = (input, _matched, _pattern) => {
 handlers.SOFTPHONE_METRICS = (input, matched, pattern) => {
     const output = input;
     try {
-        const objects = JSON.parse(matched[1]);
+        let objects;
+        if (matched[1] && matched[1].trim()) {
+            // パターンマッチからJSONを取得
+            objects = JSON.parse(matched[1]);
+        } else if (input.objects && Array.isArray(input.objects)) {
+            // objectsフィールドから直接取得
+            objects = input.objects;
+        } else {
+            throw new Error('No metrics data found');
+        }
+
         output.objects = objects;
         output.text = pattern.messages;
         pushMetrics(objects);
